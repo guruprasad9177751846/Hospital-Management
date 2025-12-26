@@ -10,6 +10,7 @@ const userRoutes = require('./routes/user.routes');
 const areaRoutes = require('./routes/area.routes');
 const taskRoutes = require('./routes/task.routes');
 const checklistRoutes = require('./routes/checklist.routes');
+const staffRecordRoutes = require('./routes/staffRecord.routes');
 
 const app = express();
 
@@ -41,6 +42,7 @@ app.use('/api/users', userRoutes);
 app.use('/api/areas', areaRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/checklists', checklistRoutes);
+app.use('/api/staff-records', staffRecordRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

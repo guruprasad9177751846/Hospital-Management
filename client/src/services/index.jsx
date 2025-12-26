@@ -4,4 +4,5 @@ export { default as checklistService } from './checklist.service';
 export { default as areaService } from './area.service';
 export { default as taskService } from './task.service';
 export { default as userService } from './user.service';
+export { default as staffRecordService } from './staffRecord.service';
 

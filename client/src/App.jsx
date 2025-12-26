@@ -5,11 +5,13 @@ import { Layout, ProtectedRoute } from './components/layout';
 
 // Pages
 import Login from './pages/Login';
+import Signup from './pages/Signup';
 import Dashboard from './pages/Dashboard';
 import Areas from './pages/Areas';
 import Tasks from './pages/Tasks';
 import Users from './pages/Users';
 import Reports from './pages/Reports';
+import StaffRecords from './pages/StaffRecords';
 
 const App = () => {
   const { loading } = useAuth();
@@ -33,6 +35,7 @@ const App = () => {
     <Routes>
       {/* Public Routes */}
       <Route path="/login" element={<Login />} />
+      <Route path="/signup" element={<Signup />} />
 
       {/* Protected Routes */}
       <Route
@@ -45,6 +48,9 @@ const App = () => {
       >
         {/* Dashboard - Accessible by both Admin and Staff */}
         <Route index element={<Dashboard />} />
+
+        {/* Staff Records - Accessible by both Admin and Staff */}
+        <Route path="records" element={<StaffRecords />} />
 
         {/* Admin Only Routes */}
         <Route

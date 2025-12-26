@@ -5,18 +5,25 @@ import {
   HiOutlineMapPin,
   HiOutlineClipboardDocumentList,
   HiOutlineUsers,
-  HiOutlineChartBar
+  HiOutlineChartBar,
+  HiOutlineDocumentText
 } from 'react-icons/hi2';
 import { useAuth } from '../../context/AuthContext';
 
-const Sidebar = () => {
+const MobileNav = () => {
   const { isAdmin } = useAuth();
 
   const navItems = [
     {
-      label: 'Daily Checklist',
+      label: 'Checklist',
       path: '/',
       icon: HiOutlineClipboardDocumentCheck,
+      roles: ['admin', 'staff']
+    },
+    {
+      label: 'Records',
+      path: '/records',
+      icon: HiOutlineDocumentText,
       roles: ['admin', 'staff']
     },
     {
@@ -50,29 +57,28 @@ const Sidebar = () => {
   );
 
   return (
-    <aside className="hidden lg:block w-64 min-h-[calc(100vh-4rem)] bg-white border-r border-slate-200/50">
-      <nav className="p-4 space-y-1">
+    <nav className="lg:hidden fixed bottom-0 left-0 right-0 z-40 bg-white border-t border-slate-200 shadow-lg">
+      <div className="flex items-center justify-around px-2 py-2">
         {filteredNavItems.map((item) => (
           <NavLink
             key={item.path}
             to={item.path}
             className={({ isActive }) => `
-              flex items-center gap-3 px-4 py-3 rounded-xl text-sm font-medium
+              flex flex-col items-center justify-center px-3 py-2 rounded-xl min-w-[60px]
               transition-all duration-200
               ${isActive 
-                ? 'bg-gradient-to-r from-primary-500/10 to-medical-teal/10 text-primary-600 shadow-sm' 
-                : 'text-slate-600 hover:bg-slate-50 hover:text-slate-900'
+                ? 'text-primary-600 bg-primary-50' 
+                : 'text-slate-500 hover:text-slate-700'
               }
             `}
           >
-            <item.icon className="w-5 h-5" />
-            {item.label}
+            <item.icon className="w-5 h-5 mb-1" />
+            <span className="text-[10px] font-medium">{item.label}</span>
           </NavLink>
         ))}
-      </nav>
-    </aside>
+      </div>
+    </nav>
   );
 };
 
-export default Sidebar;
-
+export default MobileNav;
