@@ -10,6 +10,12 @@ const checklistEntrySchema = new mongoose.Schema({
     type: Date,
     required: [true, 'Date is required']
   },
+  // New field: Hospital reference (optional for backward compatibility)
+  hospital: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hospital',
+    default: null
+  },
   status: {
     type: Boolean,
     default: false
@@ -36,10 +42,12 @@ const checklistEntrySchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Compound index for unique task per date
-checklistEntrySchema.index({ task: 1, date: 1 }, { unique: true });
+// Compound index for unique task per date per hospital
+checklistEntrySchema.index({ task: 1, date: 1, hospital: 1 }, { unique: true });
 checklistEntrySchema.index({ date: 1 });
 checklistEntrySchema.index({ status: 1 });
+checklistEntrySchema.index({ hospital: 1 });
+checklistEntrySchema.index({ hospital: 1, date: 1 });
 
 // Virtual for formatted date
 checklistEntrySchema.virtual('formattedDate').get(function() {

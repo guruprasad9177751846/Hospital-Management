@@ -1,11 +1,11 @@
 const jwt = require('jsonwebtoken');
-const { User } = require('../models');
+const { User, Hospital } = require('../models');
 const { AppError } = require('../middlewares/errorHandler');
 const config = require('../config');
 
 class AuthService {
   async register(userData) {
-    const { email, password, name, role = 'staff' } = userData;
+    const { email, password, name, role = 'staff', hospital: hospitalId } = userData;
 
     // Check if user exists
     const existingUser = await User.findOne({ email });
@@ -13,12 +13,24 @@ class AuthService {
       throw new AppError('User with this email already exists', 400);
     }
 
+    // Get hospital - use provided or default
+    let hospital;
+    if (hospitalId) {
+      hospital = await Hospital.findById(hospitalId);
+      if (!hospital) {
+        throw new AppError('Hospital not found', 400);
+      }
+    } else {
+      hospital = await Hospital.getDefault();
+    }
+
     // Create user
     const user = await User.create({
       email,
       password,
       name,
-      role
+      role,
+      hospital: hospital._id
     });
 
     // Generate token
@@ -30,14 +42,22 @@ class AuthService {
         _id: user._id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        hospital: {
+          _id: hospital._id,
+          name: hospital.name,
+          code: hospital.code,
+          logoUrl: hospital.logoUrl
+        }
       }
     };
   }
 
   async login(email, password) {
-    // Find user with password field
-    const user = await User.findOne({ email }).select('+password');
+    // Find user with password field and populate hospital
+    const user = await User.findOne({ email })
+      .select('+password')
+      .populate('hospital', 'name code logoUrl');
     
     if (!user) {
       throw new AppError('Invalid email or password', 401);
@@ -56,19 +76,34 @@ class AuthService {
     // Generate token
     const token = this.generateToken(user._id, user.role);
 
+    // Get hospital info (use default if not assigned)
+    let hospitalInfo = user.hospital;
+    if (!hospitalInfo) {
+      const defaultHospital = await Hospital.getDefault();
+      hospitalInfo = {
+        _id: defaultHospital._id,
+        name: defaultHospital.name,
+        code: defaultHospital.code,
+        logoUrl: defaultHospital.logoUrl
+      };
+    }
+
     return {
       token,
       user: {
         _id: user._id,
         email: user.email,
         name: user.name,
-        role: user.role
+        role: user.role,
+        profilePicture: user.profilePicture,
+        hospital: hospitalInfo
       }
     };
   }
 
   async getCurrentUser(userId) {
-    const user = await User.findById(userId);
+    const user = await User.findById(userId)
+      .populate('hospital', 'name code logoUrl');
     if (!user) {
       throw new AppError('User not found', 404);
     }

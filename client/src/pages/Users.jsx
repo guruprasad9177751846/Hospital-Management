@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   HiOutlinePlus, 
   HiOutlinePencilSquare, 
@@ -6,17 +6,20 @@ import {
   HiOutlineMagnifyingGlass,
   HiOutlineUsers,
   HiOutlineShieldCheck,
-  HiOutlineUser
+  HiOutlineUser,
+  HiOutlineBuildingOffice2
 } from 'react-icons/hi2';
 import { useUsers, useCreateUser, useUpdateUser, useDeleteUser, useToggleUserStatus } from '../hooks/useUsers';
+import { useActiveHospitals } from '../hooks/useHospitals';
 import { Button, Input, Select, Modal, Spinner, EmptyState } from '../components/common';
 
-const UserForm = ({ user, onSubmit, onClose, isLoading }) => {
+const UserForm = ({ user, hospitals, onSubmit, onClose, isLoading }) => {
   const [formData, setFormData] = useState({
     name: user?.name || '',
     email: user?.email || '',
     password: '',
-    role: user?.role || 'staff'
+    role: user?.role || 'staff',
+    hospital: user?.hospital?._id || user?.hospital || ''
   });
   const [errors, setErrors] = useState({});
 
@@ -24,6 +27,14 @@ const UserForm = ({ user, onSubmit, onClose, isLoading }) => {
     { value: 'admin', label: 'Admin' },
     { value: 'staff', label: 'Staff' }
   ];
+
+  const hospitalOptions = useMemo(() => {
+    if (!hospitals) return [];
+    return hospitals.map(h => ({
+      value: h._id,
+      label: h.name
+    }));
+  }, [hospitals]);
 
   const validate = () => {
     const newErrors = {};
@@ -45,6 +56,7 @@ const UserForm = ({ user, onSubmit, onClose, isLoading }) => {
     
     const submitData = { ...formData };
     if (!submitData.password) delete submitData.password;
+    if (!submitData.hospital) delete submitData.hospital;
     onSubmit(submitData);
   };
 
@@ -81,6 +93,14 @@ const UserForm = ({ user, onSubmit, onClose, isLoading }) => {
         options={roleOptions}
         error={errors.role}
       />
+      <Select
+        label="Hospital"
+        value={formData.hospital}
+        onChange={(e) => setFormData(prev => ({ ...prev, hospital: e.target.value }))}
+        options={hospitalOptions}
+        placeholder="Select Hospital"
+        error={errors.hospital}
+      />
       <div className="flex gap-3 pt-4">
         <Button type="button" variant="secondary" onClick={onClose} className="flex-1">
           Cancel
@@ -96,11 +116,17 @@ const UserForm = ({ user, onSubmit, onClose, isLoading }) => {
 const Users = () => {
   const [search, setSearch] = useState('');
   const [filterRole, setFilterRole] = useState('');
+  const [filterHospital, setFilterHospital] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedUser, setSelectedUser] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const { data, isLoading, error } = useUsers({ search, role: filterRole || undefined });
+  const { data, isLoading, error } = useUsers({ 
+    search, 
+    role: filterRole || undefined,
+    hospitalId: filterHospital || undefined 
+  });
+  const { data: hospitals, isLoading: hospitalsLoading } = useActiveHospitals();
   const { mutate: createUser, isPending: isCreating } = useCreateUser();
   const { mutate: updateUser, isPending: isUpdating } = useUpdateUser();
   const { mutate: deleteUser, isPending: isDeleting } = useDeleteUser();
@@ -110,6 +136,14 @@ const Users = () => {
     { value: 'admin', label: 'Admin' },
     { value: 'staff', label: 'Staff' }
   ];
+
+  const hospitalOptions = useMemo(() => {
+    if (!hospitals) return [];
+    return hospitals.map(h => ({
+      value: h._id,
+      label: h.name
+    }));
+  }, [hospitals]);
 
   const handleCreate = (formData) => {
     createUser(formData, {
@@ -188,6 +222,13 @@ const Users = () => {
             placeholder="All Roles"
             className="sm:w-48"
           />
+          <Select
+            value={filterHospital}
+            onChange={(e) => setFilterHospital(e.target.value)}
+            options={hospitalOptions}
+            placeholder="All Hospitals"
+            className="sm:w-48"
+          />
         </div>
       </div>
 
@@ -220,6 +261,7 @@ const Users = () => {
                 <tr>
                   <th>User</th>
                   <th>Email</th>
+                  <th>Hospital</th>
                   <th className="text-center">Role</th>
                   <th className="text-center">Status</th>
                   <th className="text-right">Actions</th>
@@ -237,6 +279,16 @@ const Users = () => {
                       </div>
                     </td>
                     <td className="text-slate-600">{user.email}</td>
+                    <td>
+                      {user.hospital ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-50 text-cyan-700 border border-cyan-200">
+                          <HiOutlineBuildingOffice2 className="w-3.5 h-3.5" />
+                          {user.hospital.name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-sm">Not assigned</span>
+                      )}
+                    </td>
                     <td>
                       <div className="flex justify-center">
                         <span className={`
@@ -307,6 +359,7 @@ const Users = () => {
       >
         <UserForm
           user={selectedUser}
+          hospitals={hospitals}
           onSubmit={selectedUser ? handleUpdate : handleCreate}
           onClose={closeModal}
           isLoading={isCreating || isUpdating}

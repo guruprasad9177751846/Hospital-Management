@@ -6,8 +6,10 @@ const areaService = {
     return response.data;
   },
 
-  getActive: async () => {
-    const response = await api.get('/areas/active');
+  getActive: async (hospitalId = null) => {
+    const params = {};
+    if (hospitalId) params.hospitalId = hospitalId;
+    const response = await api.get('/areas/active', { params });
     return response.data;
   },
 

@@ -5,4 +5,5 @@ export { default as areaService } from './area.service';
 export { default as taskService } from './task.service';
 export { default as userService } from './user.service';
 export { default as staffRecordService } from './staffRecord.service';
+export { default as hospitalService } from './hospital.service';
 

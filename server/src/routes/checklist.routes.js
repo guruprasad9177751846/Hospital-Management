@@ -76,6 +76,37 @@ router.post('/save', authenticate, saveChecklistValidation, validate, checklistC
 // Export routes - ADMIN ONLY (Critical: Staff must NOT access these)
 router.get('/export/csv', authenticate, adminOnly, dateValidation, validate, checklistController.exportCSV);
 router.get('/export/pdf', authenticate, adminOnly, dateValidation, validate, checklistController.exportPDF);
+router.get('/export/docx', authenticate, adminOnly, dateValidation, validate, checklistController.exportDOCX);
+
+// Date range validation
+const dateRangeValidation = [
+  query('startDate')
+    .notEmpty()
+    .withMessage('Start date is required')
+    .isISO8601()
+    .withMessage('Invalid start date format'),
+  query('endDate')
+    .notEmpty()
+    .withMessage('End date is required')
+    .isISO8601()
+    .withMessage('Invalid end date format'),
+  query('areaId')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid area ID'),
+  query('hospitalId')
+    .optional()
+    .isMongoId()
+    .withMessage('Invalid hospital ID')
+];
+
+// Date range export routes - ADMIN ONLY (exports tasks created within date range)
+router.get('/export/range/csv', authenticate, adminOnly, dateRangeValidation, validate, checklistController.exportRangeCSV);
+router.get('/export/range/pdf', authenticate, adminOnly, dateRangeValidation, validate, checklistController.exportRangePDF);
+router.get('/export/range/docx', authenticate, adminOnly, dateRangeValidation, validate, checklistController.exportRangeDOCX);
+
+// Reports by createdAt date range
+router.get('/reports', authenticate, dateRangeValidation, validate, checklistController.getReportsByDateRange);
 
 module.exports = router;
 

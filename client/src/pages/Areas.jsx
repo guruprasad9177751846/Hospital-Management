@@ -1,28 +1,41 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo } from 'react';
 import { 
   HiOutlinePlus, 
   HiOutlinePencilSquare, 
   HiOutlineTrash,
   HiOutlineMagnifyingGlass,
-  HiOutlineMapPin
+  HiOutlineMapPin,
+  HiOutlineBuildingOffice2
 } from 'react-icons/hi2';
 import { useAreas, useCreateArea, useUpdateArea, useDeleteArea, useToggleAreaStatus } from '../hooks/useAreas';
-import { Button, Input, Modal, Spinner, EmptyState, Toggle } from '../components/common';
+import { useActiveHospitals } from '../hooks/useHospitals';
+import { useAuth } from '../context/AuthContext';
+import { Button, Input, Select, Modal, Spinner, EmptyState, Toggle } from '../components/common';
 import toast from 'react-hot-toast';
 
-const AreaForm = ({ area, onSubmit, onClose, isLoading }) => {
+const AreaForm = ({ area, hospitals, userHospital, onSubmit, onClose, isLoading }) => {
   const [formData, setFormData] = useState({
     name: area?.name || '',
     code: area?.code || '',
-    description: area?.description || ''
+    description: area?.description || '',
+    hospital: area?.hospital?._id || area?.hospital || userHospital || ''
   });
   const [errors, setErrors] = useState({});
+
+  const hospitalOptions = useMemo(() => {
+    if (!hospitals) return [];
+    return hospitals.map(h => ({
+      value: h._id,
+      label: h.name
+    }));
+  }, [hospitals]);
 
   const validate = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Area name is required';
     if (!formData.code.trim()) newErrors.code = 'Area code is required';
     if (formData.code.length > 10) newErrors.code = 'Code cannot exceed 10 characters';
+    if (!formData.hospital) newErrors.hospital = 'Hospital is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
   };
@@ -35,6 +48,15 @@ const AreaForm = ({ area, onSubmit, onClose, isLoading }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Select
+        label="Hospital"
+        value={formData.hospital}
+        onChange={(e) => setFormData(prev => ({ ...prev, hospital: e.target.value }))}
+        options={hospitalOptions}
+        placeholder="Select Hospital"
+        error={errors.hospital}
+        icon={HiOutlineBuildingOffice2}
+      />
       <Input
         label="Area Name"
         value={formData.name}
@@ -73,16 +95,27 @@ const AreaForm = ({ area, onSubmit, onClose, isLoading }) => {
 };
 
 const Areas = () => {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
+  const [filterHospital, setFilterHospital] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedArea, setSelectedArea] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const { data, isLoading, error } = useAreas({ search });
+  const { data: hospitals } = useActiveHospitals();
+  const { data, isLoading, error } = useAreas({ search, hospitalId: filterHospital || undefined });
   const { mutate: createArea, isPending: isCreating } = useCreateArea();
   const { mutate: updateArea, isPending: isUpdating } = useUpdateArea();
   const { mutate: deleteArea, isPending: isDeleting } = useDeleteArea();
   const { mutate: toggleStatus } = useToggleAreaStatus();
+
+  const hospitalOptions = useMemo(() => {
+    if (!hospitals) return [];
+    return hospitals.map(h => ({
+      value: h._id,
+      label: h.name
+    }));
+  }, [hospitals]);
 
   const handleCreate = (data) => {
     createArea(data, {
@@ -143,14 +176,25 @@ const Areas = () => {
         </Button>
       </div>
 
-      {/* Search */}
+      {/* Filters */}
       <div className="card p-4">
-        <Input
-          placeholder="Search areas..."
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          icon={HiOutlineMagnifyingGlass}
-        />
+        <div className="flex flex-col sm:flex-row gap-4">
+          <div className="flex-1">
+            <Input
+              placeholder="Search areas..."
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              icon={HiOutlineMagnifyingGlass}
+            />
+          </div>
+          <Select
+            value={filterHospital}
+            onChange={(e) => setFilterHospital(e.target.value)}
+            options={hospitalOptions}
+            placeholder="All Hospitals"
+            className="sm:w-48"
+          />
+        </div>
       </div>
 
       {/* Table */}
@@ -182,6 +226,7 @@ const Areas = () => {
                 <tr>
                   <th>Code</th>
                   <th>Name</th>
+                  <th>Hospital</th>
                   <th>Description</th>
                   <th className="text-center">Status</th>
                   <th className="text-right">Actions</th>
@@ -196,6 +241,16 @@ const Areas = () => {
                       </span>
                     </td>
                     <td className="font-medium text-slate-800">{area.name}</td>
+                    <td>
+                      {area.hospital ? (
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-xs font-medium bg-cyan-50 text-cyan-700 border border-cyan-200">
+                          <HiOutlineBuildingOffice2 className="w-3.5 h-3.5" />
+                          {area.hospital.name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-sm">-</span>
+                      )}
+                    </td>
                     <td className="text-sm text-slate-600 max-w-xs truncate">
                       {area.description || '-'}
                     </td>
@@ -245,6 +300,8 @@ const Areas = () => {
       >
         <AreaForm
           area={selectedArea}
+          hospitals={hospitals}
+          userHospital={user?.hospital?._id || user?.hospital}
           onSubmit={selectedArea ? handleUpdate : handleCreate}
           onClose={closeModal}
           isLoading={isCreating || isUpdating}
@@ -278,4 +335,3 @@ const Areas = () => {
 };
 
 export default Areas;
-

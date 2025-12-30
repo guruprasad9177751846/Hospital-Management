@@ -2,19 +2,22 @@ import React, { useState, useRef, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { 
   HiOutlineUser, 
-  HiOutlineCog6Tooth, 
   HiOutlineArrowRightOnRectangle,
   HiChevronDown,
-  HiOutlineShieldCheck
+  HiOutlineShieldCheck,
+  HiOutlineBuildingOffice2
 } from 'react-icons/hi2';
 import { useAuth } from '../../context/AuthContext';
-import { Logo } from '../common';
 
 const Header = () => {
   const { user, logout, isAdmin } = useAuth();
   const navigate = useNavigate();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const dropdownRef = useRef(null);
+
+  // Get hospital info from user
+  const hospitalLogo = user?.hospital?.logoUrl;
+  const hospitalName = user?.hospital?.name || 'Daily Checklist';
 
   useEffect(() => {
     const handleClickOutside = (event) => {
@@ -36,9 +39,26 @@ const Header = () => {
     <header className="sticky top-0 z-40 bg-white/80 backdrop-blur-xl border-b border-slate-200/50 shadow-sm">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="flex items-center justify-between h-16">
-          {/* Logo */}
-          <div className="flex items-center gap-8">
-            <Logo size="small" />
+          {/* Hospital Logo & Name */}
+          <div className="flex items-center gap-3">
+            {hospitalLogo ? (
+              <img 
+                src={hospitalLogo} 
+                alt={hospitalName}
+                className="h-10 w-auto max-w-[120px] object-contain"
+                onError={(e) => {
+                  e.target.style.display = 'none';
+                  e.target.nextSibling.style.display = 'flex';
+                }}
+              />
+            ) : null}
+            <div className={`h-10 w-10 rounded-xl bg-gradient-to-br from-primary-500 to-medical-teal flex items-center justify-center ${hospitalLogo ? 'hidden' : ''}`}>
+              <HiOutlineBuildingOffice2 className="w-5 h-5 text-white" />
+            </div>
+            <div className="hidden sm:block">
+              <h1 className="text-lg font-display font-bold text-slate-800">{hospitalName}</h1>
+              <p className="text-xs text-slate-500">Daily Checklist System</p>
+            </div>
           </div>
 
           {/* User Menu */}
@@ -47,7 +67,20 @@ const Header = () => {
               onClick={() => setIsDropdownOpen(!isDropdownOpen)}
               className="flex items-center gap-3 px-3 py-2 rounded-xl hover:bg-slate-50 transition-colors"
             >
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-medical-teal flex items-center justify-center text-white font-semibold text-sm shadow-soft">
+              {user?.profilePicture ? (
+                <img 
+                  src={user.profilePicture} 
+                  alt={user.name}
+                  className="w-9 h-9 rounded-full object-cover shadow-soft"
+                  onError={(e) => {
+                    e.target.style.display = 'none';
+                    e.target.nextSibling.style.display = 'flex';
+                  }}
+                />
+              ) : null}
+              <div 
+                className={`w-9 h-9 rounded-full bg-gradient-to-br from-primary-500 to-medical-teal flex items-center justify-center text-white font-semibold text-sm shadow-soft ${user?.profilePicture ? 'hidden' : ''}`}
+              >
                 {user?.name?.charAt(0).toUpperCase()}
               </div>
               <div className="hidden sm:block text-left">
@@ -77,18 +110,6 @@ const Header = () => {
                     <HiOutlineUser className="w-4 h-4 mr-3 text-slate-400" />
                     Profile
                   </button>
-                  {isAdmin && (
-                    <button
-                      onClick={() => {
-                        setIsDropdownOpen(false);
-                        navigate('/settings');
-                      }}
-                      className="dropdown-item"
-                    >
-                      <HiOutlineCog6Tooth className="w-4 h-4 mr-3 text-slate-400" />
-                      Settings
-                    </button>
-                  )}
                 </div>
                 <div className="py-1 border-t border-slate-100">
                   <button

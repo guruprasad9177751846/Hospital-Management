@@ -7,7 +7,7 @@ class UserRepository {
   }
 
   async findAll(params = {}) {
-    const { search, role, page = 1, limit = 50 } = params;
+    const { search, role, hospitalId, page = 1, limit = 50 } = params;
     
     const query = {};
     if (search) {
@@ -19,12 +19,17 @@ class UserRepository {
     if (role) {
       query.role = role;
     }
+    // Hospital filter (optional for backward compatibility)
+    if (hospitalId) {
+      query.hospital = hospitalId;
+    }
 
     const skip = (page - 1) * limit;
     
     const [users, total] = await Promise.all([
       User.find(query)
         .select('-password')
+        .populate('hospital', 'name code')
         .sort({ createdAt: -1 })
         .skip(skip)
         .limit(limit),
@@ -43,7 +48,9 @@ class UserRepository {
   }
 
   async findById(id) {
-    return await User.findById(id).select('-password');
+    return await User.findById(id)
+      .select('-password')
+      .populate('hospital', 'name code logoUrl');
   }
 
   async findByEmail(email) {
@@ -58,15 +65,36 @@ class UserRepository {
         user.password = data.password;
         delete data.password;
         Object.assign(user, data);
-        return await user.save();
+        await user.save();
+        return await this.findById(id);
       }
     }
     
-    return await User.findByIdAndUpdate(
+    await User.findByIdAndUpdate(
       id,
       { ...data, updatedAt: new Date() },
       { new: true, runValidators: true }
-    ).select('-password');
+    );
+    
+    return await this.findById(id);
+  }
+
+  async updateProfile(id, data) {
+    // Only allow updating specific profile fields
+    const allowedFields = ['name', 'email', 'profilePicture'];
+    const updateData = {};
+    
+    for (const field of allowedFields) {
+      if (data[field] !== undefined) {
+        updateData[field] = data[field];
+      }
+    }
+
+    return await User.findByIdAndUpdate(
+      id,
+      { ...updateData, updatedAt: new Date() },
+      { new: true, runValidators: true }
+    ).select('-password').populate('hospital', 'name code logoUrl');
   }
 
   async delete(id) {

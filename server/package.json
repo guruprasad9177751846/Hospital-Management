@@ -6,17 +6,20 @@
   "scripts": {
     "start": "node src/index.js",
     "dev": "nodemon src/index.js",
-    "seed": "node src/utils/seeder.js"
+    "seed": "node src/utils/seeder.js",
+    "migrate:multi-hospital": "node src/utils/migration-multi-hospital.js"
   },
   "dependencies": {
     "bcryptjs": "^2.4.3",
     "cors": "^2.8.5",
+    "docx": "^8.5.0",
     "dotenv": "^16.3.1",
     "express": "^4.18.2",
     "express-validator": "^7.0.1",
     "json2csv": "^6.0.0-alpha.2",
     "jsonwebtoken": "^9.0.2",
     "mongoose": "^8.0.3",
+    "multer": "^1.4.5-lts.1",
     "pdfkit": "^0.14.0"
   },
   "devDependencies": {

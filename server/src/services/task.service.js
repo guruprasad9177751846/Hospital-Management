@@ -21,20 +21,24 @@ class TaskService {
       throw new AppError('Area not found', 404);
     }
 
+    // Get hospital from area
+    const hospitalId = area.hospital?._id || area.hospital || data.hospital;
+
     // Generate task ID if not provided
     if (!data.taskId) {
       const count = await taskRepository.countByArea(data.area);
       data.taskId = `${area.code}${count + 1}`;
     } else {
-      // Check for duplicate taskId
-      const existing = await taskRepository.findByTaskId(data.taskId);
+      // Check for duplicate taskId within the same hospital
+      const existing = await taskRepository.findByTaskIdAndHospital(data.taskId, hospitalId);
       if (existing) {
-        throw new AppError('Task ID already exists', 400);
+        throw new AppError('Task ID already exists in this hospital', 400);
       }
     }
 
     return await taskRepository.create({
       ...data,
+      hospital: hospitalId, // Set hospital from area
       createdBy: userId
     });
   }
@@ -45,19 +49,23 @@ class TaskService {
       throw new AppError('Task not found', 404);
     }
 
-    // If taskId is being changed, check for duplicates
-    if (data.taskId && data.taskId !== task.taskId) {
-      const existing = await taskRepository.findByTaskId(data.taskId);
-      if (existing) {
-        throw new AppError('Task ID already exists', 400);
-      }
-    }
+    let hospitalId = task.hospital;
 
-    // If area is being changed, verify it exists
+    // If area is being changed, verify it exists and update hospital
     if (data.area && data.area !== task.area.toString()) {
       const area = await areaRepository.findById(data.area);
       if (!area) {
         throw new AppError('Area not found', 404);
+      }
+      hospitalId = area.hospital?._id || area.hospital;
+      data.hospital = hospitalId;
+    }
+
+    // If taskId is being changed, check for duplicates within the hospital
+    if (data.taskId && data.taskId !== task.taskId) {
+      const existing = await taskRepository.findByTaskIdAndHospital(data.taskId, hospitalId);
+      if (existing) {
+        throw new AppError('Task ID already exists in this hospital', 400);
       }
     }
 

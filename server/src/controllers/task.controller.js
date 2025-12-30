@@ -3,8 +3,8 @@ const { taskService } = require('../services');
 class TaskController {
   async getAll(req, res, next) {
     try {
-      const { search, areaId, page, limit } = req.query;
-      const result = await taskService.getAll({ search, areaId, page, limit });
+      const { search, areaId, hospitalId, page, limit } = req.query;
+      const result = await taskService.getAll({ search, areaId, hospitalId, page, limit });
       res.json({
         success: true,
         data: result

@@ -1,34 +1,62 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { 
   HiOutlinePlus, 
   HiOutlinePencilSquare, 
   HiOutlineTrash,
   HiOutlineMagnifyingGlass,
-  HiOutlineClipboardDocumentList
+  HiOutlineClipboardDocumentList,
+  HiOutlineBuildingOffice2
 } from 'react-icons/hi2';
 import { useTasks, useCreateTask, useUpdateTask, useDeleteTask, useToggleTaskStatus } from '../hooks/useTasks';
-import { useActiveAreas } from '../hooks/useAreas';
+import { useAreas, useActiveAreas } from '../hooks/useAreas';
+import { useActiveHospitals } from '../hooks/useHospitals';
+import { useAuth } from '../context/AuthContext';
 import { Button, Input, Select, Modal, Spinner, EmptyState } from '../components/common';
 
-const TaskForm = ({ task, areas, onSubmit, onClose, isLoading }) => {
+const TaskForm = ({ task, hospitals, userHospital, onSubmit, onClose, isLoading }) => {
   const [formData, setFormData] = useState({
     taskId: task?.taskId || '',
     name: task?.name || '',
     description: task?.description || '',
+    hospital: task?.hospital?._id || task?.hospital || task?.area?.hospital?._id || task?.area?.hospital || userHospital || '',
     area: task?.area?._id || '',
     order: task?.order || 0
   });
   const [errors, setErrors] = useState({});
+
+  // Fetch areas filtered by selected hospital
+  const { data: areasData } = useAreas({ hospitalId: formData.hospital || undefined, isActive: true });
+  const areas = areasData?.areas || [];
+
+  const hospitalOptions = useMemo(() => {
+    if (!hospitals) return [];
+    return hospitals.map(h => ({
+      value: h._id,
+      label: h.name
+    }));
+  }, [hospitals]);
 
   const areaOptions = useMemo(() => 
     areas?.map(area => ({ value: area._id, label: `${area.code} - ${area.name}` })) || [],
     [areas]
   );
 
+  // Reset area when hospital changes
+  useEffect(() => {
+    if (!task && formData.hospital) {
+      // Only reset if this is a new task (not editing)
+      const currentAreaBelongsToHospital = areas.some(a => a._id === formData.area);
+      if (!currentAreaBelongsToHospital) {
+        setFormData(prev => ({ ...prev, area: '' }));
+      }
+    }
+  }, [formData.hospital, areas, task, formData.area]);
+
   const validate = () => {
     const newErrors = {};
     if (!formData.name.trim()) newErrors.name = 'Task name is required';
     if (!formData.description.trim()) newErrors.description = 'Description is required';
+    if (!formData.hospital) newErrors.hospital = 'Hospital is required';
     if (!formData.area) newErrors.area = 'Area is required';
     setErrors(newErrors);
     return Object.keys(newErrors).length === 0;
@@ -44,6 +72,24 @@ const TaskForm = ({ task, areas, onSubmit, onClose, isLoading }) => {
 
   return (
     <form onSubmit={handleSubmit} className="space-y-4">
+      <Select
+        label="Hospital"
+        value={formData.hospital}
+        onChange={(e) => setFormData(prev => ({ ...prev, hospital: e.target.value, area: '' }))}
+        options={hospitalOptions}
+        placeholder="Select Hospital"
+        error={errors.hospital}
+        icon={HiOutlineBuildingOffice2}
+      />
+      <Select
+        label="Area"
+        value={formData.area}
+        onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
+        options={areaOptions}
+        placeholder={formData.hospital ? "Select an area" : "Select hospital first"}
+        error={errors.area}
+        disabled={!formData.hospital}
+      />
       <div className="grid grid-cols-2 gap-4">
         <Input
           label="Task ID (Auto-generated if empty)"
@@ -60,14 +106,6 @@ const TaskForm = ({ task, areas, onSubmit, onClose, isLoading }) => {
           min={0}
         />
       </div>
-      <Select
-        label="Area"
-        value={formData.area}
-        onChange={(e) => setFormData(prev => ({ ...prev, area: e.target.value }))}
-        options={areaOptions}
-        placeholder="Select an area"
-        error={errors.area}
-      />
       <Input
         label="Task Name"
         value={formData.name}
@@ -99,23 +137,50 @@ const TaskForm = ({ task, areas, onSubmit, onClose, isLoading }) => {
 };
 
 const Tasks = () => {
+  const { user } = useAuth();
   const [search, setSearch] = useState('');
   const [filterArea, setFilterArea] = useState('');
+  const [filterHospital, setFilterHospital] = useState('');
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedTask, setSelectedTask] = useState(null);
   const [deleteConfirm, setDeleteConfirm] = useState(null);
 
-  const { data, isLoading, error } = useTasks({ search, areaId: filterArea || undefined });
-  const { data: areas } = useActiveAreas();
+  const { data: hospitals } = useActiveHospitals();
+  const { data: areasData } = useAreas({ hospitalId: filterHospital || undefined, isActive: true });
+  const areas = areasData?.areas || [];
+  
+  const { data, isLoading, error } = useTasks({ 
+    search, 
+    areaId: filterArea || undefined,
+    hospitalId: filterHospital || undefined
+  });
   const { mutate: createTask, isPending: isCreating } = useCreateTask();
   const { mutate: updateTask, isPending: isUpdating } = useUpdateTask();
   const { mutate: deleteTask, isPending: isDeleting } = useDeleteTask();
   const { mutate: toggleStatus } = useToggleTaskStatus();
 
+  const hospitalOptions = useMemo(() => {
+    if (!hospitals) return [];
+    return hospitals.map(h => ({
+      value: h._id,
+      label: h.name
+    }));
+  }, [hospitals]);
+
   const areaOptions = useMemo(() => 
     areas?.map(area => ({ value: area._id, label: area.name })) || [],
     [areas]
   );
+
+  // Reset area filter when hospital filter changes
+  useEffect(() => {
+    if (filterHospital) {
+      const currentAreaBelongsToHospital = areas.some(a => a._id === filterArea);
+      if (!currentAreaBelongsToHospital) {
+        setFilterArea('');
+      }
+    }
+  }, [filterHospital, areas, filterArea]);
 
   const handleCreate = (formData) => {
     createTask(formData, {
@@ -188,6 +253,13 @@ const Tasks = () => {
             />
           </div>
           <Select
+            value={filterHospital}
+            onChange={(e) => setFilterHospital(e.target.value)}
+            options={hospitalOptions}
+            placeholder="All Hospitals"
+            className="sm:w-48"
+          />
+          <Select
             value={filterArea}
             onChange={(e) => setFilterArea(e.target.value)}
             options={areaOptions}
@@ -225,6 +297,7 @@ const Tasks = () => {
               <thead>
                 <tr>
                   <th>Task ID</th>
+                  <th>Hospital</th>
                   <th>Area</th>
                   <th>Name</th>
                   <th className="min-w-[200px]">Description</th>
@@ -240,6 +313,16 @@ const Tasks = () => {
                       <span className="font-mono text-sm font-medium text-primary-600 bg-primary-50 px-2 py-1 rounded">
                         {task.taskId}
                       </span>
+                    </td>
+                    <td>
+                      {task.area?.hospital ? (
+                        <span className="inline-flex items-center gap-1 text-xs text-cyan-700">
+                          <HiOutlineBuildingOffice2 className="w-3.5 h-3.5" />
+                          {task.area.hospital.name}
+                        </span>
+                      ) : (
+                        <span className="text-slate-400 text-sm">-</span>
+                      )}
                     </td>
                     <td>
                       <span className="text-sm text-slate-600">
@@ -307,7 +390,8 @@ const Tasks = () => {
       >
         <TaskForm
           task={selectedTask}
-          areas={areas}
+          hospitals={hospitals}
+          userHospital={user?.hospital?._id || user?.hospital}
           onSubmit={selectedTask ? handleUpdate : handleCreate}
           onClose={closeModal}
           isLoading={isCreating || isUpdating}
@@ -341,4 +425,3 @@ const Tasks = () => {
 };
 
 export default Tasks;
-

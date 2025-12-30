@@ -3,8 +3,8 @@ const { areaService } = require('../services');
 class AreaController {
   async getAll(req, res, next) {
     try {
-      const { search, page, limit } = req.query;
-      const result = await areaService.getAll({ search, page, limit });
+      const { search, page, limit, hospitalId } = req.query;
+      const result = await areaService.getAll({ search, page, limit, hospitalId });
       res.json({
         success: true,
         data: result
@@ -16,7 +16,8 @@ class AreaController {
 
   async getActive(req, res, next) {
     try {
-      const areas = await areaService.getActive();
+      const { hospitalId } = req.query;
+      const areas = await areaService.getActive(hospitalId);
       res.json({
         success: true,
         data: { areas }

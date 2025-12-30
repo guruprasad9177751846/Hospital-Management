@@ -1,12 +1,20 @@
 const StaffRecord = require('../models/StaffRecord');
+const mongoose = require('mongoose');
 
 class StaffRecordRepository {
   async findAll(filters = {}, options = {}) {
-    const { page = 1, limit = 20, sort = '-createdAt' } = options;
+    const { page = 1, limit = 20, sort = '-createdAt', hospitalId } = options;
     const skip = (page - 1) * limit;
 
-    const query = StaffRecord.find(filters)
+    // Add hospital filter if provided
+    const queryFilters = { ...filters };
+    if (hospitalId) {
+      queryFilters.hospital = hospitalId;
+    }
+
+    const query = StaffRecord.find(queryFilters)
       .populate('area', 'name code')
+      .populate('hospital', 'name code')
       .populate('createdBy', 'name email')
       .populate('resolvedBy', 'name email')
       .sort(sort)
@@ -15,7 +23,7 @@ class StaffRecordRepository {
 
     const [records, total] = await Promise.all([
       query.exec(),
-      StaffRecord.countDocuments(filters)
+      StaffRecord.countDocuments(queryFilters)
     ]);
 
     return {
@@ -32,6 +40,7 @@ class StaffRecordRepository {
   async findById(id) {
     return StaffRecord.findById(id)
       .populate('area', 'name code')
+      .populate('hospital', 'name code')
       .populate('createdBy', 'name email')
       .populate('resolvedBy', 'name email');
   }
@@ -55,8 +64,14 @@ class StaffRecordRepository {
     return StaffRecord.findByIdAndDelete(id);
   }
 
-  async getStats(userId = null) {
-    const match = userId ? { createdBy: userId } : {};
+  async getStats(userId = null, hospitalId = null) {
+    const match = {};
+    if (userId) {
+      match.createdBy = new mongoose.Types.ObjectId(userId);
+    }
+    if (hospitalId) {
+      match.hospital = new mongoose.Types.ObjectId(hospitalId);
+    }
     
     const stats = await StaffRecord.aggregate([
       { $match: match },

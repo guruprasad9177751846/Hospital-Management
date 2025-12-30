@@ -11,6 +11,7 @@ const areaRoutes = require('./routes/area.routes');
 const taskRoutes = require('./routes/task.routes');
 const checklistRoutes = require('./routes/checklist.routes');
 const staffRecordRoutes = require('./routes/staffRecord.routes');
+const hospitalRoutes = require('./routes/hospital.routes');
 
 const app = express();
 
@@ -34,7 +35,10 @@ app.use(cors({
   },
   credentials: true
 }));
-app.use(express.json());
+
+// Increase body size limit for base64 images (10MB)
+app.use(express.json({ limit: '10mb' }));
+app.use(express.urlencoded({ limit: '10mb', extended: true }));
 
 // Routes
 app.use('/api/auth', authRoutes);
@@ -43,6 +47,7 @@ app.use('/api/areas', areaRoutes);
 app.use('/api/tasks', taskRoutes);
 app.use('/api/checklists', checklistRoutes);
 app.use('/api/staff-records', staffRecordRoutes);
+app.use('/api/hospitals', hospitalRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {

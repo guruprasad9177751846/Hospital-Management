@@ -18,8 +18,10 @@ const authenticate = async (req, res, next) => {
     // Verify token
     const decoded = jwt.verify(token, config.jwtSecret);
 
-    // Find user
-    const user = await User.findById(decoded.id).select('-password');
+    // Find user and populate hospital
+    const user = await User.findById(decoded.id)
+      .select('-password')
+      .populate('hospital', 'name code logoUrl isDefault');
     
     if (!user) {
       return next(new AppError('User not found.', 401));

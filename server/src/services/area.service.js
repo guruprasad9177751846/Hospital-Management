@@ -6,8 +6,8 @@ class AreaService {
     return await areaRepository.findAll(params);
   }
 
-  async getActive() {
-    return await areaRepository.findActive();
+  async getActive(hospitalId = null) {
+    return await areaRepository.findActive(hospitalId);
   }
 
   async getById(id) {
@@ -19,10 +19,12 @@ class AreaService {
   }
 
   async create(data, userId) {
-    // Check for duplicate code
-    const existing = await areaRepository.findByCode(data.code);
+    const hospitalId = data.hospital || null;
+    
+    // Check for duplicate code within the same hospital
+    const existing = await areaRepository.findByCode(data.code, hospitalId);
     if (existing) {
-      throw new AppError('Area with this code already exists', 400);
+      throw new AppError('Area with this code already exists in this hospital', 400);
     }
 
     return await areaRepository.create({
@@ -37,11 +39,12 @@ class AreaService {
       throw new AppError('Area not found', 404);
     }
 
-    // Check for duplicate code if code is being changed
+    // Check for duplicate code if code is being changed (within same hospital)
     if (data.code && data.code !== area.code) {
-      const existing = await areaRepository.findByCode(data.code);
+      const hospitalId = area.hospital?._id || area.hospital;
+      const existing = await areaRepository.findByCode(data.code, hospitalId);
       if (existing) {
-        throw new AppError('Area with this code already exists', 400);
+        throw new AppError('Area with this code already exists in this hospital', 400);
       }
     }
 

@@ -7,9 +7,15 @@ class AreaRepository {
   }
 
   async findAll(params = {}) {
-    const { search, page = 1, limit = 50 } = params;
+    const { search, page = 1, limit = 50, hospitalId } = params;
     
     const query = {};
+    
+    // Hospital filter (optional for backward compatibility)
+    if (hospitalId) {
+      query.hospital = hospitalId;
+    }
+    
     if (search) {
       query.$or = [
         { name: { $regex: search, $options: 'i' } },
@@ -24,7 +30,8 @@ class AreaRepository {
         .sort({ name: 1 })
         .skip(skip)
         .limit(limit)
-        .populate('createdBy', 'name email'),
+        .populate('createdBy', 'name email')
+        .populate('hospital', 'name code'),
       Area.countDocuments(query)
     ]);
 
@@ -39,16 +46,28 @@ class AreaRepository {
     };
   }
 
-  async findActive() {
-    return await Area.find({ isActive: true }).sort({ name: 1 });
+  async findActive(hospitalId = null) {
+    const query = { isActive: true };
+    if (hospitalId) {
+      query.hospital = hospitalId;
+    }
+    return await Area.find(query)
+      .sort({ name: 1 })
+      .populate('hospital', 'name code');
   }
 
   async findById(id) {
-    return await Area.findById(id).populate('createdBy', 'name email');
+    return await Area.findById(id)
+      .populate('createdBy', 'name email')
+      .populate('hospital', 'name code');
   }
 
-  async findByCode(code) {
-    return await Area.findOne({ code: code.toUpperCase() });
+  async findByCode(code, hospitalId = null) {
+    const query = { code: code.toUpperCase() };
+    if (hospitalId) {
+      query.hospital = hospitalId;
+    }
+    return await Area.findOne(query);
   }
 
   async update(id, data) {
@@ -56,7 +75,7 @@ class AreaRepository {
       id,
       { ...data, updatedAt: new Date() },
       { new: true, runValidators: true }
-    );
+    ).populate('hospital', 'name code');
   }
 
   async delete(id) {

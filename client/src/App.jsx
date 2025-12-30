@@ -12,6 +12,8 @@ import Tasks from './pages/Tasks';
 import Users from './pages/Users';
 import Reports from './pages/Reports';
 import StaffRecords from './pages/StaffRecords';
+import Hospitals from './pages/Hospitals';
+import Profile from './pages/Profile';
 
 const App = () => {
   const { loading } = useAuth();
@@ -85,6 +87,17 @@ const App = () => {
             </ProtectedRoute>
           }
         />
+        <Route
+          path="hospitals"
+          element={
+            <ProtectedRoute allowedRoles={['admin']}>
+              <Hospitals />
+            </ProtectedRoute>
+          }
+        />
+
+        {/* Profile - Accessible by all authenticated users */}
+        <Route path="profile" element={<Profile />} />
       </Route>
 
       {/* Catch all - Redirect to dashboard */}

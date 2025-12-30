@@ -6,7 +6,8 @@ import {
   HiOutlineClipboardDocumentList,
   HiOutlineUsers,
   HiOutlineChartBar,
-  HiOutlineDocumentText
+  HiOutlineDocumentText,
+  HiOutlineBuildingOffice2
 } from 'react-icons/hi2';
 import { useAuth } from '../../context/AuthContext';
 
@@ -25,6 +26,12 @@ const Sidebar = () => {
       path: '/records',
       icon: HiOutlineDocumentText,
       roles: ['admin', 'staff']
+    },
+    {
+      label: 'Hospitals',
+      path: '/hospitals',
+      icon: HiOutlineBuildingOffice2,
+      roles: ['admin']
     },
     {
       label: 'Areas',

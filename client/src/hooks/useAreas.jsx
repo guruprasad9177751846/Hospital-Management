@@ -10,10 +10,10 @@ export const useAreas = (params = {}) => {
   });
 };
 
-export const useActiveAreas = () => {
+export const useActiveAreas = (hospitalId = null) => {
   return useQuery({
-    queryKey: ['areas', 'active'],
-    queryFn: () => areaService.getActive(),
+    queryKey: ['areas', 'active', hospitalId],
+    queryFn: () => areaService.getActive(hospitalId),
     select: (data) => data.data.areas,
   });
 };

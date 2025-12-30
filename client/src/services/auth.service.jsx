@@ -16,11 +16,13 @@ const authService = {
     return response.data;
   },
 
-  changePassword: async (currentPassword, newPassword) => {
-    const response = await api.post('/auth/change-password', { 
-      currentPassword, 
-      newPassword 
-    });
+  changePassword: async (data) => {
+    const response = await api.post('/auth/change-password', data);
+    return response.data;
+  },
+
+  updateProfile: async (data) => {
+    const response = await api.put('/auth/profile', data);
     return response.data;
   },
 

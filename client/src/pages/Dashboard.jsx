@@ -10,12 +10,14 @@ import {
   HiOutlineDocumentText,
   HiOutlineCheckCircle,
   HiOutlineExclamationCircle,
-  HiOutlineLockClosed
+  HiOutlineLockClosed,
+  HiOutlineBuildingOffice2
 } from 'react-icons/hi2';
 import { useAuth } from '../context/AuthContext';
 import { useChecklist, useSaveChecklist, useExportChecklist, useChecklistStatistics } from '../hooks/useChecklist';
 import { useStaffRecords, useUpdateStaffRecord, useDeleteStaffRecord } from '../hooks/useStaffRecords';
 import { useActiveAreas } from '../hooks/useAreas';
+import { useActiveHospitals } from '../hooks/useHospitals';
 import { Button, Select, DatePicker, Toggle, Spinner, EmptyState, Modal, Input } from '../components/common';
 
 const CATEGORIES = [
@@ -65,6 +67,7 @@ const Dashboard = () => {
   const { isAdmin, user } = useAuth();
   const [selectedDate, setSelectedDate] = useState(format(new Date(), 'yyyy-MM-dd'));
   const [selectedArea, setSelectedArea] = useState('');
+  const [selectedHospital, setSelectedHospital] = useState('');
   const [localChanges, setLocalChanges] = useState({});
   const [isExporting, setIsExporting] = useState(false);
   const [saveStatus, setSaveStatus] = useState('idle'); // 'idle' | 'saving' | 'saved' | 'error'
@@ -84,9 +87,31 @@ const Dashboard = () => {
     return isToday(parseISO(selectedDate));
   }, [selectedDate]);
 
-  const { data: checklist, isLoading: checklistLoading, error: checklistError } = useChecklist(selectedDate, selectedArea || null);
-  const { data: statistics } = useChecklistStatistics(selectedDate);
-  const { data: areas, isLoading: areasLoading } = useActiveAreas();
+  // Get user's hospital ID for filtering
+  const userHospitalId = user?.hospital?._id || user?.hospital;
+  
+  // Get hospitals for admin filter
+  const { data: hospitals } = useActiveHospitals();
+  
+  // Determine effective hospital ID for filtering
+  // Admin can select any hospital or see all, staff sees only their hospital
+  const effectiveHospitalId = useMemo(() => {
+    if (isAdmin) {
+      return selectedHospital || null; // Admin: selected hospital or all (null)
+    }
+    return userHospitalId; // Staff: always their hospital
+  }, [isAdmin, selectedHospital, userHospitalId]);
+  
+  // Initialize admin's hospital filter to their hospital
+  useEffect(() => {
+    if (isAdmin && userHospitalId && !selectedHospital) {
+      setSelectedHospital(userHospitalId);
+    }
+  }, [isAdmin, userHospitalId, selectedHospital]);
+
+  const { data: checklist, isLoading: checklistLoading, error: checklistError } = useChecklist(selectedDate, selectedArea || null, effectiveHospitalId);
+  const { data: statistics } = useChecklistStatistics(selectedDate, effectiveHospitalId);
+  const { data: areas, isLoading: areasLoading } = useActiveAreas(effectiveHospitalId);
   const { mutate: saveChecklist, isPending: isSaving } = useSaveChecklist();
   const { exportCSV } = useExportChecklist();
   
@@ -94,6 +119,14 @@ const Dashboard = () => {
   const { data: staffRecordsData, isLoading: recordsLoading } = useStaffRecords({ limit: 50 });
   const { mutate: updateRecord, isPending: isUpdating } = useUpdateStaffRecord();
   const { mutate: deleteRecord, isPending: isDeleting } = useDeleteStaffRecord();
+
+  const hospitalOptions = useMemo(() => {
+    if (!hospitals) return [];
+    return hospitals.map(h => ({
+      value: h._id,
+      label: h.name
+    }));
+  }, [hospitals]);
 
   const areaOptions = useMemo(() => {
     if (!areas) return [];
@@ -355,12 +388,25 @@ const Dashboard = () => {
             
             <div className="flex items-center gap-2">
               <HiOutlineFunnel className="w-5 h-5 text-slate-400 hidden sm:block" />
+              {isAdmin && (
+                <Select
+                  value={selectedHospital}
+                  onChange={(e) => {
+                    setSelectedHospital(e.target.value);
+                    setSelectedArea(''); // Reset area when hospital changes
+                  }}
+                  options={hospitalOptions}
+                  placeholder="All Hospitals"
+                  className="min-w-[160px]"
+                  icon={HiOutlineBuildingOffice2}
+                />
+              )}
               <Select
                 value={selectedArea}
                 onChange={(e) => setSelectedArea(e.target.value)}
                 options={areaOptions}
                 placeholder="All Areas"
-                className="min-w-[180px]"
+                className="min-w-[150px]"
               />
             </div>
           </div>
@@ -444,7 +490,7 @@ const Dashboard = () => {
                 <tr>
                   <th className="w-24">Task ID</th>
                   <th className="w-40">Area</th>
-                  <th className="w-36">Task Name</th>
+                  <th className="w-36">Functionality</th>
                   <th className="min-w-[250px]">Description</th>
                   <th className="w-32 text-center">Status</th>
                   <th className="w-48">Staff Name</th>

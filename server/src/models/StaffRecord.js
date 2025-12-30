@@ -33,6 +33,12 @@ const staffRecordSchema = new mongoose.Schema({
     type: mongoose.Schema.Types.ObjectId,
     ref: 'Area'
   },
+  // New field: Hospital reference (optional for backward compatibility)
+  hospital: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hospital',
+    default: null
+  },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
     ref: 'User',
@@ -59,6 +65,8 @@ staffRecordSchema.index({ createdBy: 1 });
 staffRecordSchema.index({ category: 1 });
 staffRecordSchema.index({ status: 1 });
 staffRecordSchema.index({ createdAt: -1 });
+staffRecordSchema.index({ hospital: 1 });
+staffRecordSchema.index({ hospital: 1, createdAt: -1 });
 
 module.exports = mongoose.model('StaffRecord', staffRecordSchema);
 

@@ -1,4 +1,4 @@
-const { authService } = require('../services');
+const { authService, userService } = require('../services');
 
 class AuthController {
   async register(req, res, next) {
@@ -51,6 +51,24 @@ class AuthController {
       res.json({
         success: true,
         message: result.message
+      });
+    } catch (error) {
+      next(error);
+    }
+  }
+
+  async updateProfile(req, res, next) {
+    try {
+      const { name, email, profilePicture } = req.body;
+      const user = await userService.updateProfile(req.user._id, {
+        name,
+        email,
+        profilePicture
+      });
+      res.json({
+        success: true,
+        message: 'Profile updated successfully',
+        data: { user }
       });
     } catch (error) {
       next(error);

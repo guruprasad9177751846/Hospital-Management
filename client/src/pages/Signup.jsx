@@ -1,31 +1,56 @@
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { 
   HiOutlineEnvelope, 
   HiOutlineLockClosed, 
   HiOutlineEye, 
   HiOutlineEyeSlash,
-  HiOutlineUser 
+  HiOutlineUser,
+  HiOutlineBuildingOffice2
 } from 'react-icons/hi2';
 import { useAuth } from '../context/AuthContext';
-import { Logo, Button, Input } from '../components/common';
+import { Logo, Button, Input, Select } from '../components/common';
 import { authService } from '../services';
+import { useActiveHospitals } from '../hooks/useHospitals';
 import toast from 'react-hot-toast';
 
 const Signup = () => {
   const navigate = useNavigate();
   const { isAuthenticated } = useAuth();
+  const { data: hospitals, isLoading: hospitalsLoading } = useActiveHospitals();
   
   const [formData, setFormData] = useState({
     name: '',
     email: '',
     password: '',
     confirmPassword: '',
+    hospital: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState({});
+
+  // Set default hospital when hospitals load
+  useEffect(() => {
+    if (hospitals && hospitals.length > 0 && !formData.hospital) {
+      const defaultHospital = hospitals.find(h => h.isDefault) || hospitals[0];
+      setFormData(prev => ({ ...prev, hospital: defaultHospital._id }));
+    }
+  }, [hospitals, formData.hospital]);
+
+  const hospitalOptions = useMemo(() => {
+    if (!hospitals) return [];
+    return hospitals.map(h => ({
+      value: h._id,
+      label: h.name
+    }));
+  }, [hospitals]);
+
+  const selectedHospital = useMemo(() => {
+    if (!hospitals || !formData.hospital) return null;
+    return hospitals.find(h => h._id === formData.hospital);
+  }, [hospitals, formData.hospital]);
 
   useEffect(() => {
     if (isAuthenticated) {
@@ -70,11 +95,15 @@ const Signup = () => {
 
     setIsLoading(true);
     try {
-      await authService.register({
+      const registerData = {
         name: formData.name,
         email: formData.email,
         password: formData.password,
-      });
+      };
+      if (formData.hospital) {
+        registerData.hospital = formData.hospital;
+      }
+      await authService.register(registerData);
       
       toast.success('Account created successfully! Please sign in.');
       navigate('/login');
@@ -173,7 +202,54 @@ const Signup = () => {
             </p>
           </div>
 
+          {/* Hospital Selection Info */}
+          {selectedHospital && (
+            <div className="mb-6 p-4 bg-gradient-to-r from-cyan-50 to-teal-50 rounded-xl border border-cyan-100">
+              <div className="flex items-center gap-4">
+                {selectedHospital.logoUrl ? (
+                  <img 
+                    src={selectedHospital.logoUrl} 
+                    alt={selectedHospital.name}
+                    className="w-14 h-14 object-contain rounded-lg"
+                  />
+                ) : (
+                  <div className="w-14 h-14 rounded-lg bg-white flex items-center justify-center shadow-sm">
+                    <HiOutlineBuildingOffice2 className="w-7 h-7 text-cyan-600" />
+                  </div>
+                )}
+                <div>
+                  <p className="text-xs text-cyan-600 font-medium uppercase tracking-wider">Registering for</p>
+                  <p className="text-lg font-semibold text-slate-800">{selectedHospital.name}</p>
+                </div>
+              </div>
+            </div>
+          )}
+
           <form onSubmit={handleSubmit} className="space-y-4">
+            {/* Hospital Selection */}
+            {hospitals && hospitals.length > 1 && (
+              <div className="relative">
+                <label className="block text-sm font-medium text-slate-700 mb-1.5">
+                  Select Hospital
+                </label>
+                <div className="relative">
+                  <HiOutlineBuildingOffice2 className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-400" />
+                  <select
+                    name="hospital"
+                    value={formData.hospital}
+                    onChange={handleChange}
+                    className="input pl-10 w-full"
+                  >
+                    {hospitalOptions.map(option => (
+                      <option key={option.value} value={option.value}>
+                        {option.label}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            )}
+
             <Input
               label="Full Name"
               type="text"

@@ -27,6 +27,18 @@ const userSchema = new mongoose.Schema({
     enum: ['admin', 'staff'],
     default: 'staff'
   },
+  // New field: Hospital reference (optional for backward compatibility)
+  hospital: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hospital',
+    default: null
+  },
+  // New field: Profile picture URL
+  profilePicture: {
+    type: String,
+    trim: true,
+    default: null
+  },
   isActive: {
     type: Boolean,
     default: true
@@ -43,9 +55,9 @@ const userSchema = new mongoose.Schema({
   timestamps: true
 });
 
-// Index for faster queries
-userSchema.index({ email: 1 });
+// Index for faster queries (email index created by unique: true)
 userSchema.index({ role: 1 });
+userSchema.index({ hospital: 1 });
 
 // Hash password before saving
 userSchema.pre('save', async function(next) {

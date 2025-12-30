@@ -10,7 +10,6 @@ const areaSchema = new mongoose.Schema({
   code: {
     type: String,
     required: [true, 'Area code is required'],
-    unique: true,
     uppercase: true,
     trim: true,
     maxlength: [10, 'Area code cannot exceed 10 characters']
@@ -23,6 +22,12 @@ const areaSchema = new mongoose.Schema({
   isActive: {
     type: Boolean,
     default: true
+  },
+  // New field: Hospital reference (optional for backward compatibility)
+  hospital: {
+    type: mongoose.Schema.Types.ObjectId,
+    ref: 'Hospital',
+    default: null
   },
   createdBy: {
     type: mongoose.Schema.Types.ObjectId,
@@ -37,6 +42,9 @@ const areaSchema = new mongoose.Schema({
 areaSchema.index({ code: 1 });
 areaSchema.index({ name: 1 });
 areaSchema.index({ isActive: 1 });
+areaSchema.index({ hospital: 1 });
+// Compound unique index: area code unique per hospital
+areaSchema.index({ hospital: 1, code: 1 }, { unique: true });
 
 module.exports = mongoose.model('Area', areaSchema);
 
